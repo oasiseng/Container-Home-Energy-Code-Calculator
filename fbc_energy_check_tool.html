@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Container Home Energy Code Calculator (Florida FBC 2023)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gauge-red: #ef4444; /* red-500 */
+            --gauge-yellow: #facc15; /* yellow-400 */
+            --gauge-green: #22c55e; /* green-500 */
+            --gauge-track: #e5e7eb; /* gray-200 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Tailwind bg-gray-100 */
+        }
+        /* Input group styling */
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+        .input-group label, .checkbox-label {
+            display: block;
+            font-weight: 500;
+            color: #374151; /* text-gray-700 */
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem; /* text-sm */
+        }
+        .input-group label { cursor: help; } /* Indicate hover tooltip */
+        .checkbox-label { cursor: pointer; } /* Standard cursor for checkbox label */
+
+        .input-group input[type="number"], .input-group select {
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db; /* border-gray-300 */
+            width: 100%;
+            min-width: 10ch;
+            box-sizing: border-box;
+            font-size: 1rem;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .input-group input[type="number"]:focus, .input-group select:focus {
+            outline: none;
+            border-color: #3b82f6; /* border-blue-500 */
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        .input-group input::placeholder {
+            color: #9ca3af; /* text-gray-400 */
+        }
+         /* Checkbox specific styling */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-top: 1rem; /* Add some space above checkbox */
+            padding: 0.5rem;
+            background-color: #f9fafb;
+            border-radius: 0.375rem;
+            border: 1px solid #f3f4f6;
+        }
+        .checkbox-group input[type="checkbox"] {
+            height: 1rem; width: 1rem;
+            border-radius: 0.25rem; border-color: #d1d5db;
+            color: #3b82f6; margin-right: 0.5rem; cursor: pointer;
+        }
+         .checkbox-group input[type="checkbox"]:focus {
+             outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+         }
+
+        /* Results container styling */
+        .results-container {
+            background-color: #ffffff; border-radius: 0.5rem; padding: 2rem;
+            margin-top: 2rem; border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .results-title {
+            color: #111827; font-size: 1.5rem; font-weight: 600;
+            margin-bottom: 1.5rem; border-bottom: 1px solid #d1d5db; padding-bottom: 1rem;
+        }
+         .result-section-title {
+             font-size: 1.125rem; font-weight: 600; color: #1f2937;
+             margin-top: 1.5rem; margin-bottom: 0.75rem;
+         }
+        .result-item {
+            display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem;
+            align-items: center; margin-bottom: 0.75rem; font-size: 0.875rem;
+            padding: 0.5rem 0; border-bottom: 1px dashed #e5e7eb;
+        }
+         .result-item:last-child { border-bottom: none; }
+        .result-item span:nth-child(1) { font-weight: 500; color: #4b5563; } /* Label */
+        .result-item span:nth-child(2) { font-weight: 600; color: #1f2937; text-align: right; } /* Your Value */
+        .result-item span:nth-child(3) { font-weight: 600; text-align: right; } /* Code Req / Status */
+        .result-item .pass { color: #16a34a; }
+        .result-item .fail { color: #dc2626; }
+        .result-item .note { color: #6b7280; font-style: italic; font-size: 0.75rem; } /* For NR notes */
+
+        /* Overall Status */
+        .overall-status {
+            margin-top: 1.5rem; padding: 0.75rem; border-radius: 0.375rem;
+            font-weight: 600; text-align: center;
+        }
+        .overall-status.pass { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0;}
+        .overall-status.fail { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca;}
+
+        /* Ventilation Warning */
+        .ventilation-warning {
+            margin-top: 1rem; padding: 0.75rem; border-radius: 0.375rem;
+            font-weight: 500; text-align: center; font-size: 0.875rem;
+            background-color: #ffedd5; color: #9a3412; border: 1px solid #fed7aa;
+        }
+
+        /* Score Display & Gauge */
+        .score-display-container {
+            margin-top: 2rem; padding: 1.5rem; background-color: #f9fafb;
+            border: 1px solid #e5e7eb; border-radius: 0.5rem;
+            display: flex; flex-direction: column; align-items: center; gap: 1rem;
+        }
+         @media (min-width: 640px) { .score-display-container { flex-direction: row; justify-content: space-around; } }
+        .score-text { text-align: center; }
+        .score-label { font-size: 1rem; font-weight: 500; color: #4b5563; margin-bottom: 0.25rem; }
+        .score-value { font-size: 2.5rem; font-weight: 700; color: #111827; line-height: 1; }
+        .gauge-container { width: 100%; max-width: 250px; height: 20px; background-color: var(--gauge-track); border-radius: 10px; overflow: hidden; position: relative; }
+        .gauge-bar { height: 100%; width: 0%; border-radius: 10px; background-color: var(--gauge-red); transition: width 0.5s ease-out, background-color 0.5s ease-out; }
+
+        /* Button styling */
+        .calculate-button {
+            background-color: #2563eb; color: white; padding: 0.75rem 1.5rem; border-radius: 0.375rem;
+            font-size: 1rem; font-weight: 600; cursor: pointer; transition: background-color 0.3s ease;
+            margin-top: 1.5rem; width: 100%; border: none;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        .calculate-button:hover { background-color: #1d4ed8; }
+        /* Error/Info message styling */
+        .message-area {
+            color: #b91c1c; margin-top: 1rem; font-size: 0.875rem; padding: 0.75rem 1rem;
+            background-color: #fee2e2; border-radius: 0.375rem; border: 1px solid #fecaca; font-weight: 500;
+        }
+        .info-message { color: #065f46; background-color: #d1fae5; border-color: #a7f3d0; }
+        /* Grid layout for inputs */
+        .input-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 1rem 1.5rem; }
+        @media (min-width: 768px) { .input-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (min-width: 1024px) { .input-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        /* Section titles */
+        .section-title { font-size: 1.125rem; font-weight: 600; color: #111827; margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e5e7eb; grid-column: 1 / -1; }
+        /* Styling for Intro Text */
+         .intro-box { background-color: #ffffff; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1); margin-bottom: 2rem; }
+         .intro-box p { margin-bottom: 1rem; color: #4b5563; }
+         .intro-box .note { font-style: italic; color: #4b5563; margin-top: 1rem; padding: 0.75rem; background-color: #fefce8; border-left: 4px solid #facc15; border-radius: 0.25rem; }
+         .intro-box .highlight { font-weight: 600; color: #dc2626; }
+         .intro-box strong { font-weight: 600; color: #1f2937; }
+         /* Styling for Explanation Text Below Results */
+         .explanation-box { background-color: #ffffff; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1); margin-top: 2rem; }
+         .explanation-box h3 { color: #1f2937; font-weight: 600; margin-bottom: 0.75rem; font-size: 1.125rem; }
+         .explanation-box p, .explanation-box li { color: #4b5563; font-size: 0.875rem; margin-bottom: 0.5rem; }
+         .explanation-box ul { list-style: disc; padding-left: 1.5rem; margin-top: 0.5rem; }
+         .explanation-box .highlight { font-weight: 600; color: #dc2626; }
+         .explanation-box .note strong { color: #4b5563; }
+         .explanation-box .final-note { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; font-weight: 600; }
+
+        /* Disclaimer */
+        .disclaimer { font-size: 0.75rem; color: #6b7280; margin-top: 2rem; padding: 1rem; background-color: #f9fafb; border-radius: 0.375rem; border: 1px solid #e5e7eb; text-align: left; }
+        .disclaimer strong { color: #4b5563; }
+        /* Map Placeholder */
+        .map-placeholder { margin-top: 2rem; padding: 1rem; border: 1px dashed #d1d5db; text-align: center; color: #6b7280; font-size: 0.875rem; background-color: #f9fafb; border-radius: 0.375rem; }
+        .map-placeholder a { color: #3b82f6; text-decoration: underline; }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <div class="max-w-4xl mx-auto bg-gray-100 rounded-lg p-0">
+
+        <div class="p-6 sm:p-8">
+             <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 text-center">Container Home Energy Code Calculator</h1>
+             <div class="intro-box">
+                 <p>Building a container home in Florida? Get a head start on understanding potential energy code requirements with this <strong>easy-to-use tool</strong>!</p>
+                 <p>This calculator provides a <strong>preliminary check</strong> of your planned design choices – including insulation levels, window specifications, estimated air tightness, and basic HVAC efficiency – against the <strong>prescriptive requirements</strong> found in the <strong>Florida Building Code (FBC) 2023, 8th Edition</strong> for <strong>Climate Zones 1A and 2A</strong>.</p>
+                 <p>Input your values below to get <strong>instant feedback</strong> on whether your components meet these baseline code minimums and receive a custom <strong>Oasis Container Homes Green Score™</strong> to help gauge potential performance relative to the code.</p>
+                 <p class="note"><span class="highlight">IMPORTANT:</span> This tool is for <strong>informational and initial planning purposes ONLY</strong>. It is <strong>NOT</strong> an official code compliance verification, it does <strong>NOT</strong> generate an official HERS® Index score, and it does <strong>NOT</strong> perform HVAC sizing calculations (Manual J/S/D). Always consult with qualified professionals for final design and verification.</p>
+             </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6 sm:p-8">
+            <form id="energyCheckForm">
+                <div class="input-grid">
+                    <h2 class="section-title">Project Information</h2>
+                    <div class="input-group">
+                        <label for="climateZone" title="Select the Florida Building Code Climate Zone for your location. Most of Florida is 2A, southern tip is 1A.">Florida Climate Zone</label>
+                        <select id="climateZone" name="climateZone" required>
+                            <option value="" disabled selected>-- Select Zone --</option>
+                            <option value="1A">Zone 1A (Southern FL)</option>
+                            <option value="2A">Zone 2A (Northern FL)</option>
+                        </select>
+                    </div>
+                     <div class="input-group">
+                        <label for="floorArea" title="The total square footage of the heated/cooled living space inside the home.">Conditioned Floor Area (sq ft)</label>
+                        <input type="number" step="any" id="floorArea" name="floorArea" required placeholder="e.g., 640">
+                    </div>
+                     <div class="input-group">
+                        <label for="wallHeight" title="The average height of the interior conditioned walls, typically 8 or 9 feet.">Average Wall Height (ft)</label>
+                        <input type="number" step="any" id="wallHeight" name="wallHeight" required placeholder="e.g., 8 or 9">
+                    </div>
+
+
+                    <h2 class="section-title">Envelope Insulation</h2>
+                     <div class="input-group">
+                        <label for="ceilingRValue" title="The thermal resistance (R-value) of the insulation planned for the ceiling/roof assembly. Higher is better.">Ceiling/Roof R-Value (R-)</label>
+                        <input type="number" step="any" id="ceilingRValue" name="ceilingRValue" required placeholder="e.g., 38">
+                    </div>
+                     <div class="input-group">
+                        <label for="wallRValue" title="The thermal resistance (R-value) of the insulation planned for the exterior wall assembly. Higher is better.">Wall R-Value (R-)</label>
+                        <input type="number" step="any" id="wallRValue" name="wallRValue" required placeholder="e.g., 13 or 19">
+                    </div>
+                     <div class="input-group">
+                        <label for="floorRValue" title="The thermal resistance (R-value) of the insulation planned for the floor assembly (above crawlspace or ground). Higher is better.">Floor R-Value (R-)</label>
+                        <input type="number" step="any" id="floorRValue" name="floorRValue" required placeholder="e.g., 13 or 19">
+                    </div>
+
+
+                    <h2 class="section-title">Windows & Doors (Fenestration)</h2>
+                     <div class="input-group">
+                        <label for="windowArea" title="The total area (in square feet) of all windows and glass doors combined.">Total Window Area (sq ft)</label>
+                        <input type="number" step="any" id="windowArea" name="windowArea" required placeholder="Sum of all window areas">
+                    </div>
+                    <div class="input-group">
+                        <label for="windowUFactor" title="The average U-factor of all windows/glass doors. Measures how well they prevent heat flow (lower is better). Check window NFRC label.">Average Window U-Factor</label>
+                        <input type="number" step="any" id="windowUFactor" name="windowUFactor" required placeholder="e.g., 0.40 or 0.35">
+                    </div>
+                     <div class="input-group">
+                        <label for="windowSHGC" title="The average Solar Heat Gain Coefficient of all windows/glass doors. Measures how much solar heat they transmit (lower reduces summer cooling needs). Check window NFRC label.">Average Window SHGC</label>
+                        <input type="number" step="any" id="windowSHGC" name="windowSHGC" required placeholder="e.g., 0.25">
+                    </div>
+                     <div class="input-group">
+                        <label for="doorArea" title="The total area (in square feet) of all opaque (non-glass) exterior doors.">Total Opaque Door Area (sq ft)</label>
+                        <input type="number" step="any" id="doorArea" name="doorArea" value="21" required placeholder="e.g., 21 for one door">
+                    </div>
+                     <div class="input-group checkbox-group col-span-full sm:col-span-1 md:col-span-1"> <input type="checkbox" id="impactWindows" name="impactWindows">
+                        <label for="impactWindows" class="checkbox-label" title="Check if using qualifying impact-resistant windows/doors. This allows a higher U-factor (0.65) in Zone 2A per FBC exception.">Using Impact-Resistant Windows?</label>
+                    </div>
+
+
+                     <h2 class="section-title">Air Leakage</h2>
+                     <div class="input-group">
+                        <label for="airLeakage" title="Estimated air leakage rate measured in Air Changes per Hour at 50 Pascals (ACH50). Lower means a tighter, more efficient house. Code max is 7 ACH50. Requires a blower door test for verification.">Estimated Air Leakage (ACH50)</label>
+                        <input type="number" step="any" id="airLeakage" name="airLeakage" required placeholder="Air Changes/Hour @ 50Pa (e.g., 7, 5, 3)">
+                    </div>
+
+                     <h2 class="section-title">HVAC System Efficiency</h2>
+                     <div class="input-group">
+                         <label for="hvacSEER2" title="Seasonal Energy Efficiency Ratio 2 for cooling. Found on the HVAC equipment label. Higher is more efficient.">Cooling Efficiency (SEER2)</label>
+                         <input type="number" step="any" id="hvacSEER2" name="hvacSEER2" required placeholder="e.g., 14.3 or higher">
+                     </div>
+                     <div class="input-group">
+                         <label for="hvacHSPF2" title="Heating Seasonal Performance Factor 2 for heat pumps (heating mode). Found on the equipment label. Higher is more efficient. Enter 0 if not a heat pump or heating not applicable.">Heating Efficiency (HSPF2) (If Heat Pump)</label>
+                         <input type="number" step="any" id="hvacHSPF2" name="hvacHSPF2" value="0" placeholder="e.g., 7.5 or higher (0 if N/A)">
+                     </div>
+                </div>
+
+                <button type="submit" class="calculate-button">Check Energy Performance</button>
+                <div id="message-area" class="message-area" style="display: none;"></div>
+            </form>
+        </div>
+        <div id="results" class="results-container" style="display: none;">
+            <h2 class="results-title">Preliminary Energy Check Results</h2>
+
+            <div id="overallStatus" class="overall-status" style="display: none;"></div>
+            <div id="ventilationWarning" class="ventilation-warning" style="display: none;"></div>
+
+            <div class="result-section-title">FBC 2023 Prescriptive Comparison (Zone <span id="resultZone"></span>)</div>
+            <div class="result-item">
+                <span>Ceiling Insulation</span>
+                <span id="userCeilingR"></span>
+                <span id="reqCeilingR"></span>
+            </div>
+            <div class="result-item">
+                <span>Wall Insulation</span>
+                <span id="userWallR"></span>
+                <span id="reqWallR"></span>
+            </div>
+             <div class="result-item">
+                <span>Floor Insulation</span>
+                <span id="userFloorR"></span>
+                <span id="reqFloorR"></span>
+            </div>
+             <div class="result-item">
+                <span>Window U-Factor</span>
+                <span id="userWindowU"></span>
+                <span id="reqWindowU"></span>
+            </div>
+             <div class="result-item">
+                <span>Window SHGC</span>
+                <span id="userWindowSHGC"></span>
+                <span id="reqWindowSHGC"></span>
+            </div>
+             <div class="result-item">
+                <span>Air Leakage (ACH50)</span>
+                <span id="userACH50"></span>
+                <span id="reqACH50"></span>
+            </div>
+             <div class="result-item">
+                <span>HVAC Cooling (SEER2)</span>
+                <span id="userSEER2"></span>
+                <span id="reqSEER2"></span>
+            </div>
+             <div class="result-item">
+                <span>HVAC Heating (HSPF2)</span>
+                <span id="userHSPF2"></span>
+                <span id="reqHSPF2"></span>
+            </div>
+
+            <div class="score-display-container">
+                 <div class="score-text">
+                     <div class="score-label">Oasis Container Homes Green Score™ (Preliminary)</div>
+                     <div class="score-value" id="oasisScore">---</div>
+                 </div>
+                 <div class="gauge-container">
+                     <div class="gauge-bar" id="oasisScoreGaugeBar"></div>
+                 </div>
+             </div>
+             </div>
+        <div class="explanation-box">
+             <h3>FBC Prescriptive Comparison</h3>
+             <p>This section shows the values you entered compared directly against the minimum requirements (<strong>R-Value, U-Factor, SHGC, ACH50, SEER2, HSPF2</strong>) specified in the <strong>FBC 2023 prescriptive path</strong> (Table R402.1.2 & R403.3.2) for your selected climate zone.</p>
+             <ul>
+                 <li><strong>PASS:</strong> Indicates your input meets or exceeds the minimum requirement.</li>
+                 <li><strong>FAIL:</strong> Indicates your input falls short of the minimum requirement. Note that under the prescriptive path, *all* requirements must be met. Failing even one item means the design does not comply via this path and would require using an alternative method (Performance or ERI path) involving professional analysis.</li>
+                 <li><strong>N/R:</strong> Indicates "Not Required" by the prescriptive code for that specific item in the selected zone (e.g., Window U-Factor in Zone 1A).</li>
+                 <li><strong>Exception Applied:</strong> Indicates a code exception (like for impact windows) was used for the comparison.</li>
+             </ul>
+
+             <h3>Oasis Container Homes Green Score&trade;</h3>
+             <p>This proprietary score (typically ranging from <strong>0 to 150</strong>) provides a relative indication of how your home's specified components perform compared to the FBC minimums. It rewards exceeding code minimums but penalizes falling short.</p>
+             <ul>
+                 <li>A score around the baseline (<strong>70-80</strong>) suggests generally meeting basic code requirements across the board.</li>
+                 <li>Higher scores indicate exceeding minimums in multiple areas, suggesting better potential energy performance.</li>
+                 <li>Scores below the baseline likely indicate one or more components fail to meet the prescriptive minimums.</li>
+             </ul>
+             <p class="note"><strong>Note:</strong> This score is <span class="highlight">NOT comparable</span> to an official HERS&reg; Index score and does not guarantee code compliance if any individual requirement is marked as FAIL.</p>
+
+             <h3>Visual Gauge</h3>
+             <p>The color-coded bar provides a quick visual summary of your Oasis Score:</p>
+             <ul>
+                 <li><strong>Red:</strong> Needs Improvement (Likely fails one or more code minimums)</li>
+                 <li><strong>Yellow:</strong> Fair/Good (Generally meets or slightly exceeds minimums)</li>
+                 <li><strong>Green:</strong> Excellent (Significantly exceeds minimums in multiple areas)</li>
+             </ul>
+
+            <h3>Important Notes</h3>
+             <ul>
+                <li><strong>Ventilation:</strong> If your Air Leakage input is below 3.0 ACH50, the home is considered very tight. FBC R402.4.1.2 generally requires mechanical ventilation for homes tighter than 3 ACH50 to ensure adequate fresh air and indoor air quality.</li>
+                <li><strong>Code Exceptions:</strong> This tool includes a common exception for impact window U-factor in Zone 2A. Other exceptions (like for attic insulation R-value) may exist but require detailed verification beyond this tool's scope.</li>
+             </ul>
+
+
+             <h3>Disclaimer & Next Steps</h3>
+             <p>This calculator provides a <strong>simplified, preliminary overview</strong>. Achieving true energy efficiency and code compliance involves many details not captured here, including:</p>
+             <ul>
+                 <li>Proper installation quality & thermal bridging.</li>
+                 <li>Accurate HVAC system sizing (Manual J/S/D calculations).</li>
+                 <li>Duct leakage testing (if ducts are used).</li>
+                 <li>Specific component interactions & whole-building performance.</li>
+             </ul>
+             <p>Use these results as a starting point for discussions with your <strong>builder, architect, energy rater, or HVAC contractor</strong>.</p>
+             <p class="final-note highlight">For official code compliance, HERS&reg; Ratings, or ENERGY STAR&reg; certification, you <strong>must</strong> work with certified professionals using accredited tools and procedures.</p>
+         </div>
+         <div class="map-placeholder">
+            <p>Florida Climate Zones (Approximate): Zone 1A (Southern Tip), Zone 2A (Most of Florida). <br>
+                <a href="https://basc.pnnl.gov/images/iecc-climate-zone-map-florida" target="_blank" rel="noopener noreferrer">View Example FL Climate Zone Map (External Link)</a>
+            </p>
+         </div>
+         <div class="disclaimer">
+             <strong>General Disclaimer:</strong> The Oasis Container Homes Green Score™ is a proprietary, preliminary estimate based on user-provided inputs compared against selected Florida Building Code (FBC) 2023 prescriptive requirements (including minimum equipment efficiencies). It is intended for informational and comparative purposes only and is <strong>NOT</strong> an official HERS® Index score, ENERGY STAR® certification, guarantee of code compliance, or prediction of actual energy savings. It does not verify correct HVAC sizing (Manual J/S). Actual energy performance depends significantly on construction quality, specific component choices, system sizing, occupant behavior, and local climate variations. This tool does not substitute for professional design, analysis by certified individuals (e.g., HERS Raters using accredited software), or official code verification by local building departments. Code references based on FBC 2023, 8th Ed. Verify current code for official use.
+         </div>
+         </div> <script>
+        // --- Get references to elements needed outside the handler ---
+        const energyCheckForm = document.getElementById('energyCheckForm');
+        const resultsContainer = document.getElementById('results');
+        const messageArea = document.getElementById('message-area');
+        const overallStatusDisplay = document.getElementById('overallStatus');
+        const ventilationWarningDisplay = document.getElementById('ventilationWarning');
+
+        // --- Result Display Elements ---
+        const resultZoneDisplay = document.getElementById('resultZone');
+        const userCeilingRDisplay = document.getElementById('userCeilingR');
+        const reqCeilingRDisplay = document.getElementById('reqCeilingR');
+        const userWallRDisplay = document.getElementById('userWallR');
+        const reqWallRDisplay = document.getElementById('reqWallR');
+        const userFloorRDisplay = document.getElementById('userFloorR');
+        const reqFloorRDisplay = document.getElementById('reqFloorR');
+        const userWindowUDisplay = document.getElementById('userWindowU');
+        const reqWindowUDisplay = document.getElementById('reqWindowU');
+        const userWindowSHGCDisplay = document.getElementById('userWindowSHGC');
+        const reqWindowSHGCDisplay = document.getElementById('reqWindowSHGC');
+        const userACH50Display = document.getElementById('userACH50');
+        const reqACH50Display = document.getElementById('reqACH50');
+        const userSEER2Display = document.getElementById('userSEER2');
+        const reqSEER2Display = document.getElementById('reqSEER2');
+        const userHSPF2Display = document.getElementById('userHSPF2');
+        const reqHSPF2Display = document.getElementById('reqHSPF2');
+        const oasisScoreDisplay = document.getElementById('oasisScore');
+        const oasisScoreGaugeBar = document.getElementById('oasisScoreGaugeBar');
+
+        // --- FBC 2023 (8th Ed) Prescriptive Requirements for FL Zones ---
+        const fbcRequirements = {
+            "1A": {
+                zoneName: "1A",
+                ceilingR: 30, wallR: 13, floorR: 13,
+                windowU: null, // NR - No Requirement Prescriptively (Table R402.1.2)
+                windowSHGC: 0.25, // Max SHGC
+                ach50: 7, // Max ACH50
+                minSEER2: 14.3, // Min SEER2 for Split AC/HP <= 45k Btu/h
+                minHSPF2: 7.5 // Min HSPF2 for Split HP <= 45k Btu/h
+            },
+            "2A": {
+                zoneName: "2A",
+                ceilingR: 38, wallR: 13, floorR: 13,
+                windowU: 0.40, // Max U-factor (Standard)
+                windowU_Impact: 0.65, // Max U-factor (Impact Window Exception R402.3.3)
+                windowSHGC: 0.25, // Max SHGC
+                ach50: 7, // Max ACH50
+                minSEER2: 14.3,
+                minHSPF2: 7.5
+            }
+        };
+
+        // --- Helper Function ---
+        const getStatusClass = (pass) => pass ? 'pass' : 'fail';
+        const getStatusText = (pass) => pass ? '(PASS)' : '(FAIL)';
+
+        // --- Form Submission Logic ---
+        if (energyCheckForm) {
+            energyCheckForm.addEventListener('submit', function(event) {
+                // --- Phase 1: Prevent Default & Basic Setup ---
+                event.preventDefault();
+                console.log("Energy check form submission intercepted.");
+
+                // Ensure message/result areas exist before manipulating
+                if (!messageArea || !resultsContainer || !overallStatusDisplay || !ventilationWarningDisplay) {
+                     console.error("Core display elements not found!");
+                     alert("Error: Page structure is missing required elements.");
+                     return; // Stop execution if core elements are missing
+                }
+
+                messageArea.textContent = 'Calculating...';
+                messageArea.className = 'message-area info-message';
+                messageArea.style.display = 'block';
+                resultsContainer.style.display = 'none';
+                overallStatusDisplay.style.display = 'none';
+                ventilationWarningDisplay.style.display = 'none';
+
+                // --- Phase 2: Input Gathering & Validation (within try block) ---
+                try {
+                    // Get references INSIDE handler to ensure they exist if form dynamically loaded
+                    const climateZoneSelect = document.getElementById('climateZone');
+                    const floorAreaInput = document.getElementById('floorArea');
+                    const wallHeightInput = document.getElementById('wallHeight');
+                    const ceilingRValueInput = document.getElementById('ceilingRValue');
+                    const wallRValueInput = document.getElementById('wallRValue');
+                    const floorRValueInput = document.getElementById('floorRValue');
+                    const windowAreaInput = document.getElementById('windowArea');
+                    const windowUFactorInput = document.getElementById('windowUFactor');
+                    const windowSHGCInput = document.getElementById('windowSHGC');
+                    const doorAreaInput = document.getElementById('doorArea');
+                    const impactWindowsCheckbox = document.getElementById('impactWindows'); // New checkbox
+                    const airLeakageInput = document.getElementById('airLeakage');
+                    const hvacSEER2Input = document.getElementById('hvacSEER2');
+                    const hvacHSPF2Input = document.getElementById('hvacHSPF2');
+
+                    // Check if all input elements were found
+                    const inputElements = [climateZoneSelect, floorAreaInput, wallHeightInput, ceilingRValueInput, wallRValueInput, floorRValueInput, windowAreaInput, windowUFactorInput, windowSHGCInput, doorAreaInput, impactWindowsCheckbox, airLeakageInput, hvacSEER2Input, hvacHSPF2Input];
+                     if (inputElements.some(el => !el)) {
+                         throw new Error("One or more input fields are missing from the page.");
+                     }
+
+                    // Get and Parse Values
+                    const climateZone = climateZoneSelect.value;
+                    const floorArea = parseFloat(floorAreaInput.value);
+                    const wallHeight = parseFloat(wallHeightInput.value);
+                    const ceilingR = parseFloat(ceilingRValueInput.value);
+                    const wallR = parseFloat(wallRValueInput.value);
+                    const floorR = parseFloat(floorRValueInput.value);
+                    const windowArea = parseFloat(windowAreaInput.value);
+                    const windowU = parseFloat(windowUFactorInput.value);
+                    const windowSHGC = parseFloat(windowSHGCInput.value);
+                    const doorArea = parseFloat(doorAreaInput.value);
+                    const useImpactWindows = impactWindowsCheckbox.checked;
+                    const ach50 = parseFloat(airLeakageInput.value);
+                    const seer2 = parseFloat(hvacSEER2Input.value);
+                    const hspf2 = parseFloat(hvacHSPF2Input.value);
+
+                    if (!climateZone) { throw new Error("Please select a Climate Zone."); }
+
+                    const parsedValues = [floorArea, wallHeight, ceilingR, wallR, floorR, windowArea, windowU, windowSHGC, doorArea, ach50, seer2, hspf2];
+                    if (parsedValues.some(isNaN)) { throw new Error("Invalid numeric input detected. Please check all fields."); }
+
+                    // Value Range Validation
+                    if (floorArea <= 0 || wallHeight <= 0 || ceilingR <= 0 || wallR <= 0 || floorR <= 0 || windowArea < 0 || doorArea < 0 || ach50 < 0 || seer2 <=0 || hspf2 < 0 ) {
+                        throw new Error("Areas, Heights, R-Values, ACH50, and SEER2 must be positive. HSPF2 cannot be negative.");
+                    }
+                     if (windowU <= 0 || windowSHGC < 0 || windowSHGC > 1) {
+                         throw new Error("Window U-Factor must be > 0. Window SHGC must be between 0 and 1.");
+                     }
+
+                    // --- Phase 3: Calculations ---
+                    const req = fbcRequirements[climateZone];
+                    if (!req) { throw new Error("Invalid Climate Zone selected."); } // Should be caught earlier
+
+                    // Determine effective Window U requirement based on zone and impact checkbox
+                    let effectiveWindowUReq = req.windowU; // Standard U-Factor
+                    let uFactorNote = ""; // Note for display
+                    if (climateZone === '2A' && useImpactWindows) {
+                        effectiveWindowUReq = req.windowU_Impact; // Use impact exception value
+                        uFactorNote = " (Impact Exception)";
+                    } else if (climateZone === '1A') {
+                        effectiveWindowUReq = null; // No Requirement
+                        uFactorNote = " (N/R)";
+                    }
+
+                    // Comparisons
+                    const ceilingPass = ceilingR >= req.ceilingR;
+                    const wallPass = wallR >= req.wallR;
+                    const floorPass = floorR >= req.floorR;
+                    // Handle NR for Zone 1A U-Factor
+                    const windowUPass = (effectiveWindowUReq === null) ? true : (windowU <= effectiveWindowUReq);
+                    const windowSHGCPass = windowSHGC <= req.windowSHGC;
+                    const ach50Pass = ach50 <= req.ach50;
+                    const seer2Pass = seer2 >= req.minSEER2;
+                    const hspf2Applicable = hspf2 > 0;
+                    const hspf2Pass = hspf2Applicable ? (hspf2 >= req.minHSPF2) : true;
+
+                    // Overall Prescriptive Check Status
+                    const allPass = ceilingPass && wallPass && floorPass && windowUPass && windowSHGCPass && ach50Pass && seer2Pass && hspf2Pass;
+
+                    // Calculate Oasis Green Score™
+                    let oasisScore = 80; // Adjusted Baseline score
+                    const maxScore = 150;
+
+                    // Penalties weighted more heavily now
+                    oasisScore += ceilingPass ? 5 : -15;
+                    oasisScore += wallPass ? 5 : -15;
+                    oasisScore += floorPass ? 5 : -10; // Floor slightly less critical maybe
+                    oasisScore += windowUPass ? 5 : (effectiveWindowUReq === null ? 0 : -10); // No penalty if NR
+                    oasisScore += windowSHGCPass ? 5 : -15; // SHGC very important in FL
+                    oasisScore += ach50Pass ? 5 : -15;
+                    oasisScore += seer2Pass ? 5 : -10;
+                    oasisScore += hspf2Applicable ? (hspf2Pass ? 5 : -10) : 2; // Small bonus if heating N/A
+
+                    // Bonus points (only if passing base requirement)
+                    if (ceilingPass && ceilingR > req.ceilingR * 1.2) oasisScore += 2;
+                    if (ceilingPass && ceilingR > req.ceilingR * 1.4) oasisScore += 2;
+                    if (wallPass && wallR > req.wallR * 1.3) oasisScore += 3;
+                    if (wallPass && wallR > req.wallR * 1.6) oasisScore += 2;
+                    if (floorPass && floorR > req.floorR * 1.3) oasisScore += 2;
+                    if (windowUPass && effectiveWindowUReq !== null && windowU < effectiveWindowUReq * 0.9) oasisScore += 3;
+                    if (windowUPass && effectiveWindowUReq !== null && windowU < effectiveWindowUReq * 0.8) oasisScore += 2;
+                    if (windowSHGCPass && windowSHGC < req.windowSHGC * 0.9) oasisScore += 2; // Increased SHGC bonus
+                    if (ach50Pass && ach50 < 5) oasisScore += 4; // Increased ACH bonus
+                    if (ach50Pass && ach50 < 3) oasisScore += 4;
+                    if (ach50Pass && ach50 < 1.5) oasisScore += 2;
+                    if (seer2Pass && seer2 > req.minSEER2 + 2) oasisScore += 3;
+                    if (seer2Pass && seer2 > req.minSEER2 + 4) oasisScore += 3;
+                    if (seer2Pass && seer2 > req.minSEER2 + 7) oasisScore += 2;
+                    if (hspf2Pass && hspf2 > req.minHSPF2 + 1) oasisScore += 2;
+                    if (hspf2Pass && hspf2 > req.minHSPF2 + 2.5) oasisScore += 2;
+
+                    oasisScore = Math.max(0, Math.min(maxScore, Math.round(oasisScore)));
+
+                    // --- Phase 4: Update Display ---
+                    messageArea.style.display = 'none'; // Hide calculating message
+
+                    // Check if result display elements exist before updating
+                    const resultElements = [resultZoneDisplay, userCeilingRDisplay, reqCeilingRDisplay, userWallRDisplay, reqWallRDisplay, userFloorRDisplay, reqFloorRDisplay, userWindowUDisplay, reqWindowUDisplay, userWindowSHGCDisplay, reqWindowSHGCDisplay, userACH50Display, reqACH50Display, userSEER2Display, reqSEER2Display, userHSPF2Display, reqHSPF2Display, oasisScoreDisplay, oasisScoreGaugeBar];
+                     if (resultElements.some(el => !el)) {
+                         throw new Error("One or more result display elements are missing.");
+                     }
+
+                    // Display Overall Status
+                    overallStatusDisplay.textContent = allPass ? "Overall: Meets Minimum Prescriptive Requirements" : "Overall: FAILS Minimum Prescriptive Requirements (See details below)";
+                    overallStatusDisplay.className = `overall-status ${allPass ? 'pass' : 'fail'}`;
+                    overallStatusDisplay.style.display = 'block';
+
+                    // Display Ventilation Warning if needed
+                    if (ach50 < 3) {
+                        ventilationWarningDisplay.textContent = "NOTE: Air leakage below 3.0 ACH50 generally requires mechanical ventilation per FBC R402.4.1.2.";
+                        ventilationWarningDisplay.style.display = 'block';
+                    } else {
+                        ventilationWarningDisplay.style.display = 'none';
+                    }
+
+
+                    resultZoneDisplay.textContent = req.zoneName;
+                    userCeilingRDisplay.textContent = `R-${ceilingR.toFixed(1)}`;
+                    reqCeilingRDisplay.innerHTML = `Req: R-${req.ceilingR} <span class="${getStatusClass(ceilingPass)}">${getStatusText(ceilingPass)}</span>`;
+                    userWallRDisplay.textContent = `R-${wallR.toFixed(1)}`;
+                    reqWallRDisplay.innerHTML = `Req: R-${req.wallR} <span class="${getStatusClass(wallPass)}">${getStatusText(wallPass)}</span>`;
+                    userFloorRDisplay.textContent = `R-${floorR.toFixed(1)}`;
+                    reqFloorRDisplay.innerHTML = `Req: R-${req.floorR} <span class="${getStatusClass(floorPass)}">${getStatusText(floorPass)}</span>`;
+
+                    // Display Window U-Factor with note for NR or Exception
+                    userWindowUDisplay.textContent = `${windowU.toFixed(2)}`;
+                    if (effectiveWindowUReq === null) {
+                         reqWindowUDisplay.innerHTML = `Req: N/R <span class="note">${uFactorNote}</span> <span class="pass">(PASS)</span>`;
+                    } else {
+                         reqWindowUDisplay.innerHTML = `Max: ${effectiveWindowUReq.toFixed(2)}<span class="note">${uFactorNote}</span> <span class="${getStatusClass(windowUPass)}">${getStatusText(windowUPass)}</span>`;
+                    }
+
+                    userWindowSHGCDisplay.textContent = `${windowSHGC.toFixed(2)}`;
+                    reqWindowSHGCDisplay.innerHTML = `Max: ${req.windowSHGC.toFixed(2)} <span class="${getStatusClass(windowSHGCPass)}">${getStatusText(windowSHGCPass)}</span>`;
+                    userACH50Display.textContent = `${ach50.toFixed(1)}`;
+                    reqACH50Display.innerHTML = `Max: ${req.ach50.toFixed(1)} <span class="${getStatusClass(ach50Pass)}">${getStatusText(ach50Pass)}</span>`;
+                    userSEER2Display.textContent = `${seer2.toFixed(1)}`;
+                    reqSEER2Display.innerHTML = `Min: ${req.minSEER2.toFixed(1)} <span class="${getStatusClass(seer2Pass)}">${getStatusText(seer2Pass)}</span>`;
+                    userHSPF2Display.textContent = hspf2Applicable ? `${hspf2.toFixed(1)}` : 'N/A';
+                    reqHSPF2Display.innerHTML = hspf2Applicable ? `Min: ${req.minHSPF2.toFixed(1)} <span class="${getStatusClass(hspf2Pass)}">${getStatusText(hspf2Pass)}</span>` : '(Not Applicable)';
+
+                    // Update Score and Gauge
+                    oasisScoreDisplay.textContent = oasisScore;
+                    const gaugePercent = (oasisScore / maxScore) * 100;
+                    oasisScoreGaugeBar.style.width = `${gaugePercent}%`;
+                    if (oasisScore < maxScore * 0.55) { // Adjusted thresholds slightly
+                        oasisScoreGaugeBar.style.backgroundColor = 'var(--gauge-red)';
+                    } else if (oasisScore < maxScore * 0.80) {
+                        oasisScoreGaugeBar.style.backgroundColor = 'var(--gauge-yellow)';
+                    } else {
+                        oasisScoreGaugeBar.style.backgroundColor = 'var(--gauge-green)';
+                    }
+
+                    resultsContainer.style.display = 'block'; // Show results
+
+                } catch (error) {
+                    console.error("Calculation Error:", error); // Log error to console for details
+                    messageArea.textContent = `Error: ${error.message}`;
+                    messageArea.className = 'message-area'; // Use error style
+                    messageArea.style.display = 'block';
+                    resultsContainer.style.display = 'none';
+                    overallStatusDisplay.style.display = 'none';
+                    ventilationWarningDisplay.style.display = 'none';
+                }
+            }); // End of event listener function
+        } else {
+            // Fallback if the form isn't found on load
+            console.error("Form element #energyCheckForm not found!");
+            if(messageArea) {
+                messageArea.textContent = 'Error: Calculator form could not be initialized. Check HTML structure.';
+                messageArea.className = 'message-area';
+                messageArea.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
